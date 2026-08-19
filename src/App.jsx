@@ -211,7 +211,7 @@ export default function App() {
           onClick={() => setModo('login')}
           style={{
             flex: 1,
-            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/alumno.jpg')`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/entrenador.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
@@ -231,7 +231,7 @@ export default function App() {
           onClick={() => alert('Acceso de Alumno seleccionado')}
           style={{
             flex: 1,
-            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 080', 0.8)), url('/alumno.jpg')`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/alumno.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
