@@ -211,7 +211,7 @@ export default function App() {
           onClick={() => setModo('login')}
           style={{
             flex: 1,
-            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&q=80')`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/alumno.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
@@ -231,7 +231,7 @@ export default function App() {
           onClick={() => alert('Acceso de Alumno seleccionado')}
           style={{
             flex: 1,
-            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80')`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 080', 0.8)), url('/alumno.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             display: 'flex',
