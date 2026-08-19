@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
-import { Users, UserPlus, CreditCard, Search, Check, AlertCircle, CheckCircle, Edit, Trash2, X, MessageCircle } from 'lucide-react'
+import { Users, UserPlus, CreditCard, Search, Check, AlertCircle, CheckCircle, Edit, Trash2, X, MessageCircle, Lock, LogOut } from 'lucide-react'
 
 export default function App() {
+  // Estado para controlar la vista principal de la v2.0 ('seleccion', 'login', 'admin')
+  const [modo, setModo] = useState('seleccion')
+
+  // Credenciales simples para el entrenador
+  const [usuario, setUsuario] = useState('')
+  const [password, setPassword] = useState('')
+  const [errorLogin, setErrorLogin] = useState('')
+
+  // --- ESTADOS ORIGINALES DE TU APP 1.0 ---
   const [pestana, setPestana] = useState('alumnos')
   const [alumnos, setAlumnos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -66,6 +75,20 @@ export default function App() {
       setAlumnos(alumnosProcesados)
     }
     setLoading(false)
+  }
+
+  // Login sencillo para el Entrenador
+  const manejarLogin = (e) => {
+    e.preventDefault()
+    // Aquí puedes cambiar el usuario y contraseña si lo deseas
+    if (usuario === 'admin' && password === '1234') {
+      setModo('admin')
+      setErrorLogin('')
+      setUsuario('')
+      setPassword('')
+    } else {
+      setErrorLogin('Usuario o contraseña incorrectos')
+    }
   }
 
   const guardarAlumno = async (e) => {
@@ -179,6 +202,122 @@ export default function App() {
     ? [] 
     : alumnos.filter(a => a.nombre.toLowerCase().includes(busquedaAlumno.toLowerCase()))
 
+  // --- VISTA 1: PANTALLA SPLIT (ENTRENADOR Y ALUMNO) ---
+  if (modo === 'seleccion') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', backgroundColor: '#000', fontFamily: 'system-ui, sans-serif' }}>
+        {/* Bloque Entrenador */}
+        <div 
+          onClick={() => setModo('login')}
+          style={{
+            flex: 1,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&q=80')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            cursor: 'pointer',
+            borderBottom: '2px solid #333'
+          }}
+        >
+          <h2 style={{ fontSize: '32px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', margin: 0 }}>Entrenador</h2>
+          <p style={{ color: '#aaa', fontSize: '14px', marginTop: '5px' }}>Gestionar cobros y alumnos</p>
+        </div>
+
+        {/* Bloque Alumno */}
+        <div 
+          onClick={() => alert('Acceso de Alumno seleccionado')}
+          style={{
+            flex: 1,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <h2 style={{ fontSize: '32px', color: '#fff', textTransform: 'uppercase', letterSpacing: '2px', margin: 0 }}>Alumno</h2>
+          <p style={{ color: '#aaa', fontSize: '14px', marginTop: '5px' }}>Consultar estatus</p>
+        </div>
+      </div>
+    )
+  }
+
+  // --- VISTA 2: FORMULARIO DE LOGIN ENTRENADOR ---
+  if (modo === 'login') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#111827',
+        fontFamily: 'system-ui, sans-serif',
+        padding: '20px'
+      }}>
+        <form onSubmit={manejarLogin} style={{
+          backgroundColor: '#1f2937',
+          padding: '30px',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '360px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+          color: '#fff'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <Lock size={40} color="#3b82f6" style={{ marginBottom: '10px' }} />
+            <h2 style={{ margin: 0 }}>Acceso Entrenador</h2>
+            <p style={{ fontSize: '12px', color: '#9ca3af' }}>Ingresa tus credenciales</p>
+          </div>
+
+          {errorLogin && (
+            <div style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', padding: '8px', borderRadius: '6px', fontSize: '12px', marginBottom: '15px', textAlign: 'center' }}>
+              {errorLogin}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ fontSize: '12px', color: '#9ca3af', display: 'block', marginBottom: '5px' }}>Usuario</label>
+            <input 
+              type="text" 
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              placeholder="Ej: admin" 
+              required
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #374151', backgroundColor: '#111827', color: '#fff', boxSizing: 'border-box' }} 
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', color: '#9ca3af', display: 'block', marginBottom: '5px' }}>Contraseña</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              required
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #374151', backgroundColor: '#111827', color: '#fff', boxSizing: 'border-box' }} 
+            />
+          </div>
+
+          <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+            Ingresar
+          </button>
+
+          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
+            Volver atrás
+          </button>
+        </form>
+      </div>
+    )
+  }
+
+  // --- VISTA 3: TU APP 1.0 ORIGINAL (MODO ADMIN) ---
   return (
     <div style={{
       minHeight: '100vh',
@@ -193,10 +332,18 @@ export default function App() {
     }}>
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '15px' }}>
         
-        {/* Encabezado */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '24px', margin: '10px 0 5px 0' }}>🥊 Prime Boxing</h1>
-          <p style={{ color: '#aaa', fontSize: '14px', margin: 0 }}>Control de Alumnos y Mensualidades</p>
+        {/* Encabezado con Botón Salir */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h1 style={{ fontSize: '20px', margin: 0 }}>🥊 Academia de Boxeo</h1>
+            <p style={{ color: '#aaa', fontSize: '12px', margin: 0 }}>Panel Entrenador</p>
+          </div>
+          <button 
+            onClick={() => setModo('seleccion')}
+            style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <LogOut size={14} /> Salir
+          </button>
         </div>
 
         {/* Navegación por Pestañas */}
