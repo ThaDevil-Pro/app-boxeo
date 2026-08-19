@@ -3,15 +3,21 @@ import { supabase } from './supabaseClient'
 import { Users, UserPlus, CreditCard, Search, Check, AlertCircle, CheckCircle, Edit, Trash2, X, MessageCircle, Lock, LogOut } from 'lucide-react'
 
 export default function App() {
-  // Estado para controlar la vista principal de la v2.0 ('seleccion', 'login', 'admin')
+  // Estado para la vista principal ('seleccion', 'login_entrenador', 'admin', 'login_alumno', 'perfil_alumno')
   const [modo, setModo] = useState('seleccion')
 
-  // Credenciales simples para el entrenador
+  // Credenciales Entrenador
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
   const [errorLogin, setErrorLogin] = useState('')
 
-  // --- ESTADOS ORIGINALES DE TU APP 1.0 ---
+  // Estados Alumno
+  const [idAlumno, setIdAlumno] = useState('')
+  const [datosAlumno, setDatosAlumno] = useState(null)
+  const [errorAlumno, setErrorAlumno] = useState('')
+  const [cargandoAlumno, setCargandoAlumno] = useState(false)
+
+  // --- ESTADOS APP 1.0 ORIGINAL ---
   const [pestana, setPestana] = useState('alumnos')
   const [alumnos, setAlumnos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -77,10 +83,9 @@ export default function App() {
     setLoading(false)
   }
 
-  // Login sencillo para el Entrenador
+  // Login Entrenador
   const manejarLogin = (e) => {
     e.preventDefault()
-    // Aquí puedes cambiar el usuario y contraseña si lo deseas
     if (usuario === 'admin' && password === '1234') {
       setModo('admin')
       setErrorLogin('')
@@ -89,6 +94,60 @@ export default function App() {
     } else {
       setErrorLogin('Usuario o contraseña incorrectos')
     }
+  }
+
+  // Consulta por ID Alumno
+  const consultarAlumno = async (e) => {
+    e.preventDefault()
+    setErrorAlumno('')
+    setDatosAlumno(null)
+    setCargandoAlumno(true)
+
+    const { data, error } = await supabase
+      .from('alumnos')
+      .select(`
+        *,
+        pagos (
+          proximo_pago
+        )
+      `)
+      .eq('id', idAlumno.trim())
+      .single()
+
+    if (error || !data) {
+      setErrorAlumno('ID de alumno no encontrado. Verifica con tu entrenador.')
+    } else {
+      const hoy = new Date().toISOString().split('T')[0]
+      let proximoPago = 'Sin pagos registrados'
+      let estaActivo = false
+
+      if (data.pagos && data.pagos.length > 0) {
+        const fechas = data.pagos
+          .map(p => p.proximo_pago)
+          .filter(Boolean)
+          .sort()
+          .reverse()
+
+        if (fechas.length > 0) {
+          proximoPago = fechas[0]
+          estaActivo = proximoPago >= hoy
+        }
+      }
+
+      setDatosAlumno({
+        ...data,
+        proximoPago,
+        estaActivo
+      })
+      setModo('perfil_alumno')
+    }
+    setCargandoAlumno(false)
+  }
+
+  const contactarEntrenadorWhatsApp = () => {
+    const textoMensaje = `Hola Coach, soy ${datosAlumno.nombre}. Tengo una duda con mi membresía de boxeo.`
+    const url = `https://wa.me/526771130225?text=${encodeURIComponent(textoMensaje)}`
+    window.open(url, '_blank')
   }
 
   const guardarAlumno = async (e) => {
@@ -140,11 +199,10 @@ export default function App() {
   }
 
   const eliminarAlumno = async (id, nombreAlumno) => {
-    const confirmar = window.confirm(`¿Estás seguro de que deseas eliminar a ${nombreAlumno}? También se borrarán sus pagos registrados.`)
+    const confirmar = window.confirm(`¿Estás seguro de que deseas eliminar a ${nombreAlumno}?`)
     if (!confirmar) return
 
     setMensaje('')
-    
     await supabase.from('pagos').delete().eq('alumno_id', id)
     const { error } = await supabase.from('alumnos').delete().eq('id', id)
 
@@ -202,13 +260,13 @@ export default function App() {
     ? [] 
     : alumnos.filter(a => a.nombre.toLowerCase().includes(busquedaAlumno.toLowerCase()))
 
-  // --- VISTA 1: PANTALLA SPLIT (ENTRENADOR Y ALUMNO) ---
+  // --- VISTA 1: PANTALLA DIVIDIDA (ENTRENADOR Y ALUMNO) ---
   if (modo === 'seleccion') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', backgroundColor: '#000', fontFamily: 'system-ui, sans-serif' }}>
         {/* Bloque Entrenador */}
         <div 
-          onClick={() => setModo('login')}
+          onClick={() => setModo('login_entrenador')}
           style={{
             flex: 1,
             backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/entrenador.jpg')`,
@@ -228,7 +286,7 @@ export default function App() {
 
         {/* Bloque Alumno */}
         <div 
-          onClick={() => alert('Acceso de Alumno seleccionado')}
+          onClick={() => setModo('login_alumno')}
           style={{
             flex: 1,
             backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('/alumno.jpg')`,
@@ -248,28 +306,11 @@ export default function App() {
     )
   }
 
-// --- VISTA 2: FORMULARIO DE LOGIN ENTRENADOR ---
-  if (modo === 'login') {
+  // --- VISTA 2: FORMULARIO LOGIN ENTRENADOR (MORADO OSCURO) ---
+  if (modo === 'login_entrenador') {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#0f0a1c', // Fondo general violeta/negro muy oscuro
-        fontFamily: 'system-ui, sans-serif',
-        padding: '20px'
-      }}>
-        <form onSubmit={manejarLogin} style={{
-          backgroundColor: '#1e1435', // Tarjeta del formulario morado oscuro
-          padding: '30px',
-          borderRadius: '16px',
-          width: '100%',
-          maxWidth: '360px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
-          border: '1px solid #3b2063', // Borde morado sutil
-          color: '#fff'
-        }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0a1c', fontFamily: 'system-ui, sans-serif', padding: '20px' }}>
+        <form onSubmit={manejarLogin} style={{ backgroundColor: '#1e1435', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '360px', boxShadow: '0 10px 30px rgba(0,0,0,0.6)', border: '1px solid #3b2063', color: '#fff' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <Lock size={40} color="#a855f7" style={{ marginBottom: '10px' }} />
             <h2 style={{ margin: 0, color: '#f3e8ff' }}>Acceso Entrenador</h2>
@@ -284,83 +325,109 @@ export default function App() {
 
           <div style={{ marginBottom: '15px' }}>
             <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>Usuario</label>
-            <input 
-              type="text" 
-              value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
-              placeholder="Ej: admin" 
-              required
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box', outline: 'none' }} 
-            />
+            <input type="text" value={usuario} onChange={(e) => setUsuario(e.target.value)} placeholder="Ej: admin" required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>Contraseña</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
-              required
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box', outline: 'none' }} 
-            />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box' }} />
           </div>
 
-          <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#7e22ce', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px', transition: '0.2s' }}>
-            Ingresar
-          </button>
-
-          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#a855f7', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
-            Volver atrás
-          </button>
+          <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#7e22ce', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>Ingresar</button>
+          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#a855f7', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Volver atrás</button>
         </form>
       </div>
     )
   }
-  // --- VISTA 3: TU APP 1.0 ORIGINAL (MODO ADMIN) ---
+
+  // --- VISTA 3: FORMULARIO LOGIN ALUMNO (MORADO OSCURO) ---
+  if (modo === 'login_alumno') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0a1c', fontFamily: 'system-ui, sans-serif', padding: '20px' }}>
+        <form onSubmit={consultarAlumno} style={{ backgroundColor: '#1e1435', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '360px', boxShadow: '0 10px 30px rgba(0,0,0,0.6)', border: '1px solid #3b2063', color: '#fff' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <Users size={40} color="#a855f7" style={{ marginBottom: '10px' }} />
+            <h2 style={{ margin: 0, color: '#f3e8ff' }}>Acceso Alumno</h2>
+            <p style={{ fontSize: '12px', color: '#c084fc' }}>Ingresa tu ID de Alumno</p>
+          </div>
+
+          {errorAlumno && (
+            <div style={{ backgroundColor: '#581c87', color: '#f5d0fe', padding: '8px', borderRadius: '6px', fontSize: '12px', marginBottom: '15px', textAlign: 'center', border: '1px solid #7e22ce' }}>
+              {errorAlumno}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>ID de Registro</label>
+            <input type="text" value={idAlumno} onChange={(e) => setIdAlumno(e.target.value)} placeholder="Ej: 12" required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box' }} />
+          </div>
+
+          <button type="submit" disabled={cargandoAlumno} style={{ width: '100%', padding: '12px', backgroundColor: '#7e22ce', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+            {cargandoAlumno ? 'Buscando...' : 'Consultar Mi Estatus'}
+          </button>
+          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#a855f7', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Volver atrás</button>
+        </form>
+      </div>
+    )
+  }
+
+  // --- VISTA 4: PERFIL ALUMNO ---
+  if (modo === 'perfil_alumno' && datosAlumno) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0a1c', fontFamily: 'system-ui, sans-serif', padding: '20px' }}>
+        <div style={{ backgroundColor: '#1e1435', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '380px', boxShadow: '0 10px 30px rgba(0,0,0,0.6)', border: '1px solid #3b2063', color: '#fff', textAlign: 'center' }}>
+          <h2 style={{ margin: '0 0 5px 0', color: '#f3e8ff', fontSize: '24px' }}>{datosAlumno.nombre}</h2>
+          <p style={{ fontSize: '13px', color: '#c084fc', textTransform: 'capitalize', margin: '0 0 20px 0' }}>
+            Categoría: <strong>{datosAlumno.tipo_alumno}</strong>
+          </p>
+
+          <div style={{ backgroundColor: '#0f0a1c', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #3b2063' }}>
+            <span style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>Próxima Fecha de Pago:</span>
+            <strong style={{ fontSize: '18px', color: datosAlumno.estaActivo ? '#4ade80' : '#f87171' }}>
+              {datosAlumno.proximoPago}
+            </strong>
+            <div style={{ marginTop: '10px' }}>
+              <span style={{ backgroundColor: datosAlumno.estaActivo ? '#15803d' : '#991b1b', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block' }}>
+                {datosAlumno.estaActivo ? 'Membresía Activa' : 'Pago Vencido / Pendiente'}
+              </span>
+            </div>
+          </div>
+
+          <button onClick={contactarEntrenadorWhatsApp} style={{ width: '100%', padding: '12px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <MessageCircle size={18} /> Contactar al Entrenador
+          </button>
+
+          <button type="button" onClick={() => { setModo('seleccion'); setIdAlumno(''); setDatosAlumno(null); }} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#a855f7', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // --- VISTA 5: APP 1.0 ORIGINAL (MODO ADMIN) ---
   return (
-    <div style={{
-      minHeight: '100vh',
-      width: '100%',
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9)), url('/fondo.jpg')`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      backgroundAttachment: 'fixed',
-      fontFamily: 'system-ui, sans-serif',
-      color: '#fff'
-    }}>
+    <div style={{ minHeight: '100vh', width: '100%', backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9)), url('/fondo.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed', fontFamily: 'system-ui, sans-serif', color: '#fff' }}>
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '15px' }}>
         
-        {/* Encabezado con Botón Salir */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <div>
             <h1 style={{ fontSize: '20px', margin: 0 }}>🥊 Academia de Boxeo</h1>
             <p style={{ color: '#aaa', fontSize: '12px', margin: 0 }}>Panel Entrenador</p>
           </div>
-          <button 
-            onClick={() => setModo('seleccion')}
-            style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-          >
+          <button onClick={() => setModo('seleccion')} style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <LogOut size={14} /> Salir
           </button>
         </div>
 
-        {/* Navegación por Pestañas */}
         <div style={{ display: 'flex', gap: '5px', backgroundColor: 'rgba(30, 30, 30, 0.85)', padding: '5px', borderRadius: '10px', marginBottom: '20px', backdropFilter: 'blur(5px)' }}>
-          <button 
-            onClick={() => { setPestana('alumnos'); setMensaje(''); }}
-            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'alumnos' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+          <button onClick={() => { setPestana('alumnos'); setMensaje(''); }} style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'alumnos' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <Users size={16} /> Alumnos
           </button>
-          <button 
-            onClick={() => { setPestana('nuevo'); setMensaje(''); }}
-            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'nuevo' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+          <button onClick={() => { setPestana('nuevo'); setMensaje(''); }} style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'nuevo' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <UserPlus size={16} /> {alumnoEditando ? 'Editar' : 'Nuevo'}
           </button>
-          <button 
-            onClick={() => { setPestana('pagos'); setMensaje(''); }}
-            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'pagos' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+          <button onClick={() => { setPestana('pagos'); setMensaje(''); }} style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: pestana === 'pagos' ? '#2563eb' : 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <CreditCard size={16} /> Cobrar
           </button>
         </div>
@@ -371,33 +438,13 @@ export default function App() {
           </div>
         )}
 
-        {/* Vista: Lista de Alumnos */}
         {pestana === 'alumnos' && (
           <div>
             <h3 style={{ marginBottom: '10px' }}>Lista de Inscritos ({alumnosFiltrados.length})</h3>
 
-            {/* Botones de Filtro */}
             <div style={{ display: 'flex', gap: '5px', marginBottom: '15px', flexWrap: 'wrap' }}>
-              {[
-                { id: 'todos', label: 'Todos' },
-                { id: 'niños', label: 'Niños' },
-                { id: 'recreativo', label: 'Recreativo' },
-                { id: 'competitivo', label: 'Competitivo' }
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFiltroCategoria(f.id)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    backgroundColor: filtroCategoria === f.id ? '#2563eb' : '#334155',
-                    color: '#fff'
-                  }}
-                >
+              {[{ id: 'todos', label: 'Todos' }, { id: 'niños', label: 'Niños' }, { id: 'recreativo', label: 'Recreativo' }, { id: 'competitivo', label: 'Competitivo' }].map((f) => (
+                <button key={f.id} onClick={() => setFiltroCategoria(f.id)} style={{ padding: '6px 12px', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: filtroCategoria === f.id ? '#2563eb' : '#334155', color: '#fff' }}>
                   {f.label}
                 </button>
               ))}
@@ -412,59 +459,30 @@ export default function App() {
                 {alumnosFiltrados.map((alumno) => (
                   <div key={alumno.id} style={{ backgroundColor: 'rgba(30, 30, 30, 0.85)', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(5px)' }}>
                     <div>
-                      <strong style={{ fontSize: '16px', display: 'block' }}>{alumno.nombre}</strong>
+                      <strong style={{ fontSize: '16px', display: 'block' }}>{alumno.nombre} (ID: {alumno.id})</strong>
                       <span style={{ fontSize: '12px', color: '#aaa', display: 'block' }}>📱 {alumno.telefono}</span>
-                      <span style={{ fontSize: '12px', color: '#888', marginTop: '2px', display: 'block' }}>
-                        📅 Vence: {alumno.proximoPago ? alumno.proximoPago : 'Sin pagos'}
-                      </span>
+                      <span style={{ fontSize: '12px', color: '#888', marginTop: '2px', display: 'block' }}>📅 Vence: {alumno.proximoPago ? alumno.proximoPago : 'Sin pagos'}</span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                      <span style={{ backgroundColor: '#334155', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                        {alumno.tipo_alumno}
-                      </span>
+                      <span style={{ backgroundColor: '#334155', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', textTransform: 'capitalize' }}>{alumno.tipo_alumno}</span>
                       
                       {alumno.proximoPago ? (
                         alumno.estaActivo ? (
-                          <span style={{ backgroundColor: '#15803d', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <CheckCircle size={12} /> Al día
-                          </span>
+                          <span style={{ backgroundColor: '#15803d', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={12} /> Al día</span>
                         ) : (
-                          <span style={{ backgroundColor: '#b91c1c', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <AlertCircle size={12} /> Vencido
-                          </span>
+                          <span style={{ backgroundColor: '#b91c1c', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> Vencido</span>
                         )
                       ) : (
-                        <span style={{ backgroundColor: '#475569', color: '#aaa', padding: '3px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                          Pendiente
-                        </span>
+                        <span style={{ backgroundColor: '#475569', color: '#aaa', padding: '3px 8px', borderRadius: '12px', fontSize: '11px' }}>Pendiente</span>
                       )}
 
-                      {/* Botones de Acción */}
                       <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                         {!alumno.estaActivo && alumno.proximoPago && (
-                          <button 
-                            onClick={() => enviarRecordatorioWhatsApp(alumno)}
-                            title="Enviar Cobro por WhatsApp"
-                            style={{ backgroundColor: '#16a34a', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                          >
-                            <MessageCircle size={14} />
-                          </button>
+                          <button onClick={() => enviarRecordatorioWhatsApp(alumno)} title="Enviar Cobro" style={{ backgroundColor: '#16a34a', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer' }}><MessageCircle size={14} /></button>
                         )}
-                        <button 
-                          onClick={() => iniciarEdicion(alumno)}
-                          title="Editar alumno"
-                          style={{ backgroundColor: '#3b82f6', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={() => eliminarAlumno(alumno.id, alumno.nombre)}
-                          title="Eliminar alumno"
-                          style={{ backgroundColor: '#ef4444', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <button onClick={() => iniciarEdicion(alumno)} title="Editar" style={{ backgroundColor: '#3b82f6', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer' }}><Edit size={14} /></button>
+                        <button onClick={() => eliminarAlumno(alumno.id, alumno.nombre)} title="Eliminar" style={{ backgroundColor: '#ef4444', border: 'none', borderRadius: '4px', padding: '5px', color: '#fff', cursor: 'pointer' }}><Trash2 size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -474,43 +492,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Vista: Registrar / Editar Alumno */}
         {pestana === 'nuevo' && (
           <form onSubmit={guardarAlumno} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3>{alumnoEditando ? 'Editar Alumno' : 'Nuevo Alumno'}</h3>
               {alumnoEditando && (
-                <button 
-                  type="button" 
-                  onClick={cancelarEdicion}
-                  style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <X size={14} /> Cancelar
-                </button>
+                <button type="button" onClick={cancelarEdicion} style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><X size={14} /> Cancelar</button>
               )}
             </div>
 
-            <input
-              type="text"
-              placeholder="Nombre Completo"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
-              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }}
-            />
-            <input
-              type="tel"
-              placeholder="Teléfono (WhatsApp Ej: 5211234567890)"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              required
-              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }}
-            />
-            <select
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
-              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }}
-            >
+            <input type="text" placeholder="Nombre Completo" value={nombre} onChange={(e) => setNombre(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }} />
+            <input type="tel" placeholder="Teléfono WhatsApp" value={telefono} onChange={(e) => setTelefono(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }} />
+            <select value={categoria} onChange={(e) => setCategoria(e.target.value)} style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }}>
               <option value="niños">Niños</option>
               <option value="recreativo">Recreativo</option>
               <option value="competitivo">Competitivo</option>
@@ -521,67 +514,21 @@ export default function App() {
           </form>
         )}
 
-        {/* Vista: Registrar Pago */}
         {pestana === 'pagos' && (
           <form onSubmit={registrarPago} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <h3>Registrar Mensualidad</h3>
 
             <div style={{ position: 'relative' }}>
-              <label style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px', display: 'block' }}>
-                Buscar Alumno por Nombre:
-              </label>
+              <label style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px', display: 'block' }}>Buscar Alumno por Nombre:</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Escribe el nombre del alumno..."
-                  value={busquedaAlumno}
-                  onChange={(e) => {
-                    setBusquedaAlumno(e.target.value)
-                    setAlumnoSeleccionado(null)
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 12px 12px 35px',
-                    borderRadius: '6px',
-                    border: '1px solid #333',
-                    backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                    color: '#fff',
-                    boxSizing: 'border-box'
-                  }}
-                />
+                <input type="text" placeholder="Escribe el nombre del alumno..." value={busquedaAlumno} onChange={(e) => { setBusquedaAlumno(e.target.value); setAlumnoSeleccionado(null); }} style={{ width: '100%', padding: '12px 12px 12px 35px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff', boxSizing: 'border-box' }} />
                 <Search size={18} style={{ position: 'absolute', left: '10px', color: '#888' }} />
               </div>
 
               {!alumnoSeleccionado && sugerenciasAlumnos.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#2a2a2a',
-                  border: '1px solid #444',
-                  borderRadius: '0 0 6px 6px',
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  zIndex: 10,
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-                }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#2a2a2a', border: '1px solid #444', borderRadius: '0 0 6px 6px', maxHeight: '150px', overflowY: 'auto', zIndex: 10 }}>
                   {sugerenciasAlumnos.map((a) => (
-                    <div
-                      key={a.id}
-                      onClick={() => {
-                        setAlumnoSeleccionado(a)
-                        setBusquedaAlumno(a.nombre)
-                      }}
-                      style={{
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #333',
-                        display: 'flex',
-                        justify: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
+                    <div key={a.id} onClick={() => { setAlumnoSeleccionado(a); setBusquedaAlumno(a.nombre); }} style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>{a.nombre}</span>
                       <span style={{ fontSize: '11px', color: '#aaa' }}>{a.tipo_alumno}</span>
                     </div>
@@ -596,29 +543,8 @@ export default function App() {
               )}
             </div>
 
-            <input
-              type="number"
-              placeholder="Monto ($)"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              required
-              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }}
-            />
-            
-            <button 
-              type="submit" 
-              disabled={!alumnoSeleccionado}
-              style={{ 
-                padding: '12px', 
-                backgroundColor: alumnoSeleccionado ? '#2563eb' : '#475569', 
-                color: '#fff', 
-                border: 'none', 
-                borderRadius: '6px', 
-                fontWeight: 'bold', 
-                cursor: alumnoSeleccionado ? 'pointer' : 'not-allowed', 
-                marginTop: '10px' 
-              }}
-            >
+            <input type="number" placeholder="Monto ($)" value={monto} onChange={(e) => setMonto(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '1px solid #333', backgroundColor: 'rgba(30, 30, 30, 0.9)', color: '#fff' }} />
+            <button type="submit" disabled={!alumnoSeleccionado} style={{ padding: '12px', backgroundColor: alumnoSeleccionado ? '#2563eb' : '#475569', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: alumnoSeleccionado ? 'pointer' : 'not-allowed', marginTop: '10px' }}>
               Registrar Pago
             </button>
           </form>
