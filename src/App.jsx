@@ -248,7 +248,7 @@ export default function App() {
     )
   }
 
-  // --- VISTA 2: FORMULARIO DE LOGIN ENTRENADOR ---
+// --- VISTA 2: FORMULARIO DE LOGIN ENTRENADOR ---
   if (modo === 'login') {
     return (
       <div style={{
@@ -256,67 +256,67 @@ export default function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#111827',
+        backgroundColor: '#0f0a1c', // Fondo general violeta/negro muy oscuro
         fontFamily: 'system-ui, sans-serif',
         padding: '20px'
       }}>
         <form onSubmit={manejarLogin} style={{
-          backgroundColor: '#1f2937',
+          backgroundColor: '#1e1435', // Tarjeta del formulario morado oscuro
           padding: '30px',
-          borderRadius: '12px',
+          borderRadius: '16px',
           width: '100%',
           maxWidth: '360px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+          border: '1px solid #3b2063', // Borde morado sutil
           color: '#fff'
         }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <Lock size={40} color="#3b82f6" style={{ marginBottom: '10px' }} />
-            <h2 style={{ margin: 0 }}>Acceso Entrenador</h2>
-            <p style={{ fontSize: '12px', color: '#9ca3af' }}>Ingresa tus credenciales</p>
+            <Lock size={40} color="#a855f7" style={{ marginBottom: '10px' }} />
+            <h2 style={{ margin: 0, color: '#f3e8ff' }}>Acceso Entrenador</h2>
+            <p style={{ fontSize: '12px', color: '#c084fc' }}>Ingresa tus credenciales</p>
           </div>
 
           {errorLogin && (
-            <div style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', padding: '8px', borderRadius: '6px', fontSize: '12px', marginBottom: '15px', textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#581c87', color: '#f5d0fe', padding: '8px', borderRadius: '6px', fontSize: '12px', marginBottom: '15px', textAlign: 'center', border: '1px solid #7e22ce' }}>
               {errorLogin}
             </div>
           )}
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ fontSize: '12px', color: '#9ca3af', display: 'block', marginBottom: '5px' }}>Usuario</label>
+            <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>Usuario</label>
             <input 
               type="text" 
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}
               placeholder="Ej: admin" 
               required
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #374151', backgroundColor: '#111827', color: '#fff', boxSizing: 'border-box' }} 
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box', outline: 'none' }} 
             />
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', color: '#9ca3af', display: 'block', marginBottom: '5px' }}>Contraseña</label>
+            <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '5px' }}>Contraseña</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••" 
               required
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #374151', backgroundColor: '#111827', color: '#fff', boxSizing: 'border-box' }} 
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4c1d95', backgroundColor: '#0f0a1c', color: '#fff', boxSizing: 'border-box', outline: 'none' }} 
             />
           </div>
 
-          <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+          <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#7e22ce', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px', transition: '0.2s' }}>
             Ingresar
           </button>
 
-          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
+          <button type="button" onClick={() => setModo('seleccion')} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#a855f7', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
             Volver atrás
           </button>
         </form>
       </div>
     )
   }
-
   // --- VISTA 3: TU APP 1.0 ORIGINAL (MODO ADMIN) ---
   return (
     <div style={{
