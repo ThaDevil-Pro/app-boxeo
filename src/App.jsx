@@ -111,7 +111,7 @@ export default function App() {
           proximo_pago
         )
       `)
-      .eq('id', idAlumno.trim())
+      .eq('id_num', idAlumno.trim())
       .single()
 
     if (error || !data) {
