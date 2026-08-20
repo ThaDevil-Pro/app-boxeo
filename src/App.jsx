@@ -459,7 +459,7 @@ export default function App() {
                 {alumnosFiltrados.map((alumno) => (
                   <div key={alumno.id} style={{ backgroundColor: 'rgba(30, 30, 30, 0.85)', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backdropFilter: 'blur(5px)' }}>
                     <div>
-                      <strong style={{ fontSize: '16px', display: 'block' }}>{alumno.nombre} (ID: {alumno.id})</strong>
+                      <strong style={{ fontSize: '16px', display: 'block' }}>{alumno.nombre} (ID: #{alumno.id_num})</strong>
                       <span style={{ fontSize: '12px', color: '#aaa', display: 'block' }}>📱 {alumno.telefono}</span>
                       <span style={{ fontSize: '12px', color: '#888', marginTop: '2px', display: 'block' }}>📅 Vence: {alumno.proximoPago ? alumno.proximoPago : 'Sin pagos'}</span>
                     </div>
